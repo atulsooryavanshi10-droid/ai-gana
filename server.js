@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.static("."));
 
 app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/index.html");
+  res.sendFile(__dirname + "/Index.html");
 });
 
 app.get("/api/status", (req, res) => {
