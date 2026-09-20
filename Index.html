@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Gana</title>
+
   <style>
     body {
       margin: 0;
@@ -72,6 +73,12 @@
       color: white;
       font-size: 18px;
       font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #777;
+      cursor: not-allowed;
     }
 
     .result {
@@ -80,6 +87,23 @@
       background: #eee;
       border-radius: 10px;
       display: none;
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    .download {
+      display: none;
+      margin-top: 15px;
+      padding: 12px;
+      background: #111;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -95,7 +119,7 @@
   <div class="card">
 
     <label>भाषा / Language</label>
-    <select>
+    <select id="language">
       <option>Auto Detect</option>
       <option>Marathi</option>
       <option>Hindi</option>
@@ -110,20 +134,26 @@
     </select>
 
     <label>Lyrics</label>
-    <textarea placeholder="तुमच्या गाण्याचे lyrics येथे लिहा..."></textarea>
+    <textarea
+      id="lyrics"
+      placeholder="तुमच्या गाण्याचे lyrics येथे लिहा..."
+    ></textarea>
 
     <label>Music Prompt</label>
-    <textarea placeholder="उदा. Energetic Marathi DJ song with powerful drums..."></textarea>
+    <textarea
+      id="musicPrompt"
+      placeholder="उदा. Energetic Marathi DJ song with powerful drums..."
+    ></textarea>
 
     <label>Voice</label>
-    <select>
+    <select id="voice">
       <option>Male</option>
       <option>Female</option>
       <option>Duet</option>
     </select>
 
     <label>Mood</label>
-    <select>
+    <select id="mood">
       <option>Energetic</option>
       <option>Romantic</option>
       <option>Devotional</option>
@@ -134,7 +164,7 @@
     </select>
 
     <label>Music Style</label>
-    <select>
+    <select id="musicStyle">
       <option>DJ / Dance</option>
       <option>Bollywood</option>
       <option>Indian Folk</option>
@@ -145,22 +175,120 @@
       <option>Devotional</option>
     </select>
 
-    <button onclick="generateSong()">🎵 Generate Song</button>
+    <button id="generateBtn" onclick="generateSong()">
+      🎵 Generate Song
+    </button>
 
-    <div class="result" id="result">
-      🎶 Song generation will appear here.
-    </div>
+    <div class="result" id="result"></div>
+
+    <audio id="audioPlayer" controls style="display:none;"></audio>
+
+    <a id="downloadBtn" class="download" download="ai-gana.mp3">
+      ⬇️ Download MP3
+    </a>
 
   </div>
 </div>
 
 <script>
-function generateSong() {
-  document.getElementById("result").style.display = "block";
-  document.getElementById("result").innerHTML =
-    "⏳ Song generation system तयार होत आहे...";
+
+async function generateSong() {
+
+  const lyrics = document.getElementById("lyrics").value.trim();
+  const language = document.getElementById("language").value;
+  const musicPrompt = document.getElementById("musicPrompt").value.trim();
+  const voice = document.getElementById("voice").value;
+  const mood = document.getElementById("mood").value;
+  const musicStyle = document.getElementById("musicStyle").value;
+
+  const result = document.getElementById("result");
+  const button = document.getElementById("generateBtn");
+  const audioPlayer = document.getElementById("audioPlayer");
+  const downloadBtn = document.getElementById("downloadBtn");
+
+  if (!lyrics) {
+    result.style.display = "block";
+    result.innerHTML = "⚠️ आधी Lyrics लिहा.";
+    return;
+  }
+
+  button.disabled = true;
+  button.innerHTML = "⏳ गाणे तयार होत आहे...";
+
+  result.style.display = "block";
+  result.innerHTML = "🎵 AI तुमचे गाणे तयार करत आहे...<br><br>थोडा वेळ लागू शकतो.";
+
+  audioPlayer.style.display = "none";
+  downloadBtn.style.display = "none";
+
+  try {
+
+    const response = await fetch("/api/generate-song", {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        lyrics: lyrics,
+        language: language,
+        musicPrompt: musicPrompt,
+        voice: voice,
+        mood: mood,
+        musicStyle: musicStyle
+      })
+    });
+
+    if (!response.ok) {
+
+      let errorMessage = "Song generation failed.";
+
+      try {
+        const errorData = await response.json();
+
+        errorMessage =
+          errorData.error ||
+          errorData.message ||
+          errorMessage;
+
+      } catch (e) {
+        errorMessage = await response.text();
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const audioBlob = await response.blob();
+
+    const audioURL = URL.createObjectURL(audioBlob);
+
+    audioPlayer.src = audioURL;
+    audioPlayer.style.display = "block";
+
+    downloadBtn.href = audioURL;
+    downloadBtn.download = "ai-gana.mp3";
+    downloadBtn.style.display = "block";
+
+    result.innerHTML =
+      "✅ तुमचे AI गाणे तयार झाले! 🎉<br><br>खाली Play करा किंवा MP3 Download करा.";
+
+  } catch (error) {
+
+    console.error(error);
+
+    result.style.display = "block";
+
+    result.innerHTML =
+      "❌ गाणे तयार करताना समस्या आली.<br><br>" +
+      "<small>" + error.message + "</small>";
+  }
+
+  button.disabled = false;
+  button.innerHTML = "🎵 Generate Song";
 }
+
 </script>
 
 </body>
-  </html>
+</html>
